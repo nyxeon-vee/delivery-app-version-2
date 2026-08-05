@@ -60,8 +60,78 @@ Orders under a certain amount, for example `£10`, shouldn't be allowed to go th
 
 ## Structure
 
+### Geolocation API
 
-### Manage app
+`GET /geo/?postcode=A124AA `->
+```
+{
+    "premises":[
+        "2","4","6","8","10","12","14"
+    ]
+    
+}
+```
+
+`GET /geo/?postcode=A124AA&door=10` ->
+```
+{
+    "address":{
+        "premise": "10"
+        "street": "High Street"
+        "postcode": "A12 4AA"
+        "external_place_id": "uusu-dsd09-3d93d-32343-Examp"
+        "door_lat": "1.0300"
+        "door_lng"" "4.0100"
+        etc..
+    }
+    
+}
+```
+
+### Database API
+
+Lives in /api/
+
+`POST /api/<orderid>/mark-done`
+
+`POST /api/<orderid>/mark-picked`
+
+`POST /api/<storeid>/<routeid>/add-van {van: AA12 TST}`
+
+### Route Optimization Queue
+
+Lives in `/optimize/`
+
+example `/optimize/route/<storeid>/<slot>`
+
+Sends a job to `routres_to_optimize` sqs queue
+
+### Route Optimizer worker
+
+Pulls from `routres_to_optimize` and does the optimization
+sends a update to DB thru the Database API and then deletes the message off the queue
+
+### Picking Frontend/Backend
+
+Lives in `/picking/`
+
+GET `/picking/<orderid>/print/`
+
+### Driver Frontend/Backend
+
+Lives in `/driver/`
+
+example `/driver/current-stop/` shows the html of current stop
+
+### Store Management
+
+Lives in `/manage/`
+
+example `/<storeid>/manage/delivery/<day>/` shows html of slots and vans for that day
+
+### Customer Store Front
+
+Lives on `/` store main page
 
 
 ### Store Database
