@@ -56,8 +56,6 @@ Entire database of the app it handles all the picking, driving, store front
     - `is_guest`: **Bool**
     - `email_verified_at`: **DATETIME**, nullable
 
-
-
 - `orders` table
     - `id`: **Int** > primary_key
     - `order_ref`: **String** > unique (human-readable, e.g. `STOREXX-DATE-XXXX`)

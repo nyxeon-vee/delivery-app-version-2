@@ -24,6 +24,5 @@ This api is going to use another geolocating API to get coordinates for the addr
         "door_lng"" "4.0100"
         etc..
     }
-    
 }
 ```
