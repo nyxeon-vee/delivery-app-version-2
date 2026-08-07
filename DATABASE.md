@@ -2,6 +2,196 @@
 
 This is a database scheme for my supermarket store project
 
+## Diagram
+
+```mermaid
+erDiagram
+    ADDRESSES ||--o{ STORES : "located at"
+    ADDRESSES ||--o{ CUSTOMER_ADDRESSES : "saved by"
+    ADDRESSES ||--o{ ORDERS : "delivered to"
+    ADDRESSES ||--o{ SLOT_RESERVATIONS : "delivers to"
+    ADDRESSES ||--o{ DRIVE_TIMES : "origin"
+    ADDRESSES ||--o{ DRIVE_TIMES : "destination"
+
+    STORES ||--o{ SERVING_POSTCODES : covers
+    STORES ||--o{ INVENTORY : stocks
+    STORES ||--o{ ORDERS : fulfils
+    STORES ||--o{ DELIVERY_ROUTES : runs
+    STORES ||--o{ VANS : owns
+    STORES ||--o{ SLOT_RESERVATIONS : holds
+
+    PRODUCTS ||--o{ INVENTORY : "stocked as"
+    PRODUCTS ||--o{ CARTS : "added as"
+    PRODUCTS ||--o{ ORDER_ITEMS : "ordered as"
+    PRODUCTS ||--o{ ORDER_ITEMS : "substituted with"
+
+    CUSTOMERS ||--o{ ORDERS : places
+    CUSTOMERS ||--o{ CARTS : has
+    CUSTOMERS ||--o{ CUSTOMER_ADDRESSES : saves
+
+    ORDERS ||--o{ ORDER_ITEMS : contains
+    ORDERS ||--o{ ROUTE_ORDERS : "assigned via"
+    ORDERS ||--o| SLOT_RESERVATIONS : "converted from"
+
+    USERS ||--o{ ORDERS : picks
+    USERS ||--o{ ORDERS : delivers
+
+    DELIVERY_ROUTES ||--o{ ROUTE_ORDERS : sequences
+    VANS ||--o{ DELIVERY_ROUTES : assigned
+
+    STORES {
+        int id PK
+        int address_id FK
+        string name
+        string manager
+        decimal minimum_order_value
+    }
+    SERVING_POSTCODES {
+        int id PK
+        int store_id FK
+        string postcode UK
+    }
+    INVENTORY {
+        int store_id PK "FK -> stores.id"
+        int product_id PK "FK -> products.id"
+        int quantity
+    }
+    ADDRESSES {
+        int id PK
+        string premise
+        string street
+        string postcode
+        decimal door_lat
+        decimal door_lng
+        decimal park_lat
+        decimal park_lng
+        string external_place_id UK
+        int time_per_crate
+    }
+    PRODUCTS {
+        int id PK
+        string name
+        string barcode
+        bool is_age_restricted
+        decimal unit_weight
+        decimal price
+        string type
+    }
+    CUSTOMERS {
+        int id PK
+        string first_name
+        string middle_name
+        string last_name
+        string phone_number
+        string email UK
+        string password_hash
+        datetime email_verified_at
+        bool prefer_alternatives
+    }
+    CARTS {
+        int id PK
+        int customer_id FK "UK with product_id"
+        int product_id FK
+        int quantity
+    }
+    CUSTOMER_ADDRESSES {
+        int customer_id PK "FK -> customers.id"
+        int address_id PK "FK -> addresses.id"
+        string label
+        bool is_default
+    }
+    ORDERS {
+        int id PK
+        string order_ref UK
+        int customer_id FK
+        int store_id FK
+        int address_id FK
+        int grocery_crates
+        int chilled_crates
+        int frozen_crates
+        datetime slot_range_start
+        datetime slot_range_end
+        string payment_status
+        string payment_reference
+        bool is_locked
+        bool is_picked
+        datetime picked_at
+        int picked_by FK
+        int delivered_by FK
+        datetime delivered_at
+        bool is_delivered
+        string proof_of_delivery
+        decimal park_lat_actual
+        decimal park_lng_actual
+    }
+    ORDER_ITEMS {
+        int id PK
+        int order_id FK
+        int product_id FK
+        int quantity
+        decimal price_at_order
+        int picked_quantity
+        bool is_substituted
+        int substituted_product_id FK
+    }
+    ROUTE_ORDERS {
+        string route_id PK "FK -> delivery_routes.id"
+        decimal position PK
+        int order_id FK
+        bool is_flagged
+        datetime estimated_arrival
+    }
+    DELIVERY_ROUTES {
+        string id PK
+        int store_id FK
+        datetime slot_range_start
+        datetime slot_range_end
+        int van_id FK
+        int total_crates
+        int estimated_duration_seconds
+        datetime planned_departure_at
+        datetime actual_departure_at
+        bool is_locked
+    }
+    SLOT_RESERVATIONS {
+        int id PK
+        string session_token
+        int store_id FK
+        int address_id FK
+        datetime slot_range_start
+        datetime slot_range_end
+        int grocery_crates
+        int chilled_crates
+        int frozen_crates
+        datetime expires_at
+        int order_id FK
+    }
+    VANS {
+        int id PK
+        int store_id FK
+        string license_plate
+        int capacity_grocery_crates
+        int capacity_chilled_crates
+        int capacity_frozen_crates
+        string status
+    }
+    DRIVE_TIMES {
+        int id PK
+        int origin_address_id FK
+        int dest_address_id FK
+        int duration_seconds
+        int distance_metres
+        datetime fetched_at
+    }
+    USERS {
+        int id PK
+        string username UK
+        string password_hash
+        bool is_active
+        string role
+    }
+```
+
 ## Tables
 Entire database of the app it handles all the picking, driving, store front
 
@@ -50,23 +240,38 @@ Entire database of the app it handles all the picking, driving, store front
     - `middle_name`: **String** (nullable)
     - `last_name`: **String**
     - `phone_number`: **String**
-    - `address_id`: **Int** > foreign_key
     - `email`: **String** > unique, nullable
-    - `password_hash`: **String**, nullable (null for guest checkouts no account created)
-    - `is_guest`: **Bool**
+    - `password_hash`: **String**,
     - `email_verified_at`: **DATETIME**, nullable
+    - `prefer_alternatives`: **Bool** default True
+
+- `carts` table
+    - `id`: **Int** > primary_key
+    - `customer_id`: **Int** > foreign_key
+    - `product_id`: **Int** > foreign_key
+    - `quantity`: **Int**
+    - unique (customer_id, product_id)
+
+- `customer_addresses` table
+    - `customer_id`: **Int** > primary_key, foreign_key
+    - `address_id`: **Int** > primary_key, foreign_key
+    - `label`: **String** (nullable, "Home", "Work")
+    - `is_default`: **Bool**
 
 - `orders` table
     - `id`: **Int** > primary_key
     - `order_ref`: **String** > unique (human-readable, e.g. `STOREXX-DATE-XXXX`)
     - `customer_id`: **Int** > foreign_key
     - `store_id`: **Int** > foreign_key
+    - `address_id`: **Int** > foreign_key
     - `grocery_crates`: **Int** (nullable, picker fills that in)
     - `chilled_crates`: **Int** (nullable, picker fills that in)
     - `frozen_crates`: **Int** (nullable, picker fills that in)
     - `total_crates`: **grocery_crates+chilled_crates+frozen_crates**
     - `slot_range_start`: **DATETIME**
     - `slot_range_end`: **DATETIME**
+    - `payment_status`: **String** (`pending` / `paid` / `failed` — no real payments taken, a fake checkout step just sets this to `paid`, but picking and manage still gate on it so the flow is the same shape as a real one)
+    - `payment_reference`: **String** (nullable, placeholder for the processor's transaction id)
     - `is_locked`: **Bool** (locks 2h before earliest possible slot, can no longer move between routes)
     - `is_picked`: **Bool**
     - `picked_at`: **DATETIME** (nullable)
